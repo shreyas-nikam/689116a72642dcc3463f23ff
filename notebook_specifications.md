@@ -1,118 +1,185 @@
 
-# Loan Restructuring NPV Analyzer - Jupyter Notebook Specification
+# Jupyter Notebook Specification: Loan Restructuring NPV Calculator
 
 ## 1. Notebook Overview
 
 **Learning Goals:**
 
-This notebook aims to provide a hands-on experience in applying deterministic Net Present Value (NPV) valuation to loan restructuring scenarios.  Users will learn to generate cash flow schedules, construct discount curves, calculate NPV, and perform sensitivity analysis, all within a reproducible Python environment.
+*   Understand the impact of loan restructurings on Net Present Value (NPV).
+*   Learn to calculate NPV for original and restructured loan scenarios using a discounted cash flow (DCF) engine.
+*   Visualize cash flow timing differences and the economic impact (gain/loss) of loan restructurings.
+*   Explore the sensitivity of NPV to changes in discount rates.
 
 **Expected Outcomes:**
 
-Upon completion of this notebook, users will be able to:
-
-*   Understand the theoretical underpinnings of NPV valuation in the context of loan restructuring.
-*   Generate comprehensive cash flow schedules for both original and restructured loans, accounting for various loan terms.
-*   Select and justify appropriate discount rates based on loan characteristics and risk considerations.
-*   Calculate and interpret NPV and ΔNPV to quantify the economic impact of loan restructuring.
-*   Assess the robustness of NPV results through sensitivity analysis.
-*   Identify and flag material restructuring scenarios based on predefined thresholds.
+*   Generation of a synthetic dataset of loan characteristics and restructuring scenarios.
+*   Implementation of a deterministic DCF engine for calculating NPV of original and restructured loans.
+*   Creation of interactive visualizations to illustrate the impact of restructurings.
+*   Persistence of model artifacts (NPV engine) and results for subsequent analysis and validation.
 
 ## 2. Mathematical and Theoretical Foundations
 
-This section will provide the theoretical background for the NPV calculations.
+### 2.1 Net Present Value (NPV)
 
-**2.1. Net Present Value (NPV) Definition:**
+The Net Present Value (NPV) is a fundamental concept in finance used to determine the present value of a stream of future cash flows, given a specific discount rate. It is calculated using the following formula:
 
-The Net Present Value (NPV) is the sum of the present values of incoming and outgoing cash flows over a period of time.  It's used in capital budgeting to analyze the profitability of a projected investment or project.
-
-The general formula for calculating NPV is:
-
-$$NPV = \sum_{t=0}^{T} \frac{CF_t}{(1 + r)^t}$$
+$$ NPV = \sum_{t=0}^{N} \frac{CF_t}{(1 + r)^t} $$
 
 Where:
 
-*   $CF_t$ = Cash flow at time *t*
-*   *r* = Discount rate (the rate of return that could be earned on an alternative investment)
-*   *t* = Time period
-*   *T* = Total number of time periods
+*   $NPV$ is the Net Present Value.
+*   $CF_t$ is the cash flow at time t.
+*   $r$ is the discount rate (representing the opportunity cost of capital).
+*   $t$ is the time period.
+*   $N$ is the total number of time periods.
 
-**2.2. NPV in Loan Restructuring:**
+**Real-world Application:** NPV is widely used in capital budgeting to evaluate the profitability of investments, in project finance to assess the viability of projects, and in loan restructuring to determine the economic impact of modifying loan terms.
 
-In the context of loan restructuring, the NPV is used to determine the economic impact of changing the terms of a loan. We compare the NPV of the original loan to the NPV of the restructured loan. The difference between these two NPVs (ΔNPV) indicates the gain or loss resulting from the restructuring.
+### 2.2 Discounted Cash Flow (DCF)
 
-The ΔNPV is calculated as follows:
+The Discounted Cash Flow (DCF) method is a valuation method used to estimate the value of an investment based on its expected future cash flows. DCF analysis attempts to determine the value of an investment today, based on projections of how much money it will generate in the future.
+The core principle of DCF analysis is that an investment is worth the sum of all of its future free cash flows, discounted back to their present value.
 
-$$ \Delta NPV = NPV_{new} - NPV_{orig} $$
+### 2.3 Loan Restructuring Impact
 
-Where:
+Loan restructuring involves modifying the original terms of a loan agreement, such as the interest rate, payment schedule, or principal amount. The NPV of the loan can be significantly affected by restructuring.
 
-*   $NPV_{new}$ is the Net Present Value of the restructured loan.
-*   $NPV_{orig}$ is the Net Present Value of the original loan.
+**Formulas:**
 
-**2.3. Discount Rate Selection:**
+*   **NPV of Original Loan ($NPV_{orig}$):**
 
-The choice of discount rate is crucial for accurate NPV calculation.  A higher discount rate reflects higher risk and reduces the present value of future cash flows.  In loan restructuring, the discount rate should reflect the risk associated with the loan. A baseline approach is to use the original Effective Interest Rate (EIR) of the loan. However, it is imperative to consider any changes in the borrower's creditworthiness. If the credit risk has increased, a credit spread should be added to the original EIR to reflect the higher risk associated with the restructured loan.
+    $$ NPV_{orig} = \sum_{t=1}^{n} \frac{C_{orig,t}}{(1 + r)^{t}} $$
 
-Discount rate scenarios to be explored:
+    Where:
+    * $C_{orig,t}$ is the cash flow of the original loan at time $t$
+    * $r$ is the discount rate (original loan's effective interest rate)
+    * $n$ is the number of periods for the original loan
 
-*   Original EIR:  Using the original loan's EIR as the discount rate.
-*   EIR + Credit Spread: Adding a credit spread to the original EIR to account for increased credit risk.  The spread should be justified based on credit rating downgrades or other relevant risk indicators.
+*   **NPV of Restructured Loan ($NPV_{new}$):**
 
-**2.4. Cash Flow Schedule Generation:**
+    $$ NPV_{new} = \sum_{t=1}^{m} \frac{C_{new,t}}{(1 + r')^{t}} $$
 
-A critical aspect of NPV calculation is the generation of accurate cash flow schedules. These schedules outline the expected cash inflows (e.g., interest payments) and outflows (e.g., principal payments) for both the original and restructured loans. For fixed-rate loans, the cash flow schedule can be derived using standard amortization formulas.  For floating-rate loans, forward rate curves or constant-rate simplifications are employed to project future interest payments.
+    Where:
+    * $C_{new,t}$ is the cash flow of the restructured loan at time $t$
+    * $r'$ is the discount rate for the restructured loan. This could be the original EIR or adjusted for risk.
+    * $m$ is the number of periods for the new loan.
 
-**2.5. Floating Rate Loan Modelling:**
+*   **Change in NPV ($\Delta NPV$):**
 
-When dealing with floating-rate loans, the future interest rates are uncertain. Two approaches can be used to model the cash flows:
+    $$ \Delta NPV = NPV_{new} - NPV_{orig} $$
 
-*   **Forward Rate Curve:**  Using the current forward rate curve to project future interest rates.  This approach reflects market expectations of future rates.
-*   **Constant Rate Simplification:** Assuming the current rate stays constant for the entire life of the loan. This simplifies the calculations but may not be as accurate as using forward rates.
+    A positive $\Delta NPV$ indicates a gain for the borrower (loss for the lender), while a negative $\Delta NPV$ indicates a loss for the borrower (gain for the lender).
 
 ## 3. Code Requirements
 
-**3.1. Expected Libraries:**
+### 3.1 Libraries
 
-*   `pandas`: For data manipulation and analysis, especially working with tabular data (DataFrames).
-*   `numpy`: For numerical computations, including array operations and mathematical functions.
-*   `scipy`: For scientific computing, including financial functions (e.g., present value calculations), statistical analysis, and interpolation.
-*   `joblib`: For efficient serialization and deserialization of Python objects (model persistence).
-*   `matplotlib`: For creating static, interactive, and animated visualizations in Python.
-*   `seaborn` (optional): For enhanced data visualization based on Matplotlib.
-*   `pydantic`: For data validation and settings management using Python type annotations.
-*   `loguru`: For comprehensive and flexible logging.
+*   `pandas`: Used for data manipulation and analysis, particularly for creating and managing dataframes to store loan data and cash flow schedules.
+*   `numpy`: Used for numerical computations, especially for calculating present values and handling arrays of cash flows.
+*   `scipy`: Used for financial calculations, such as calculating the present value.
+*   `matplotlib`: Used for creating visualizations, including the cash flow timeline and the ΔNPV waterfall chart.
+*   `joblib`: Used to save the `npv_engine.pkl`.
 
-**3.2. Input/Output Expectations:**
+### 3.2 Input/Output Expectations
 
-*   **Input:** The notebook will read data from CSV files representing loan portfolios, restructuring scenarios, and yield curves.  The specific columns and formats are detailed in the "Dataset Requirements" table in the Input Context. Configuration parameters like materiality thresholds will be read from a YAML configuration file.
-*   **Output:** The notebook will generate cash flow schedules, NPV results, and visualizations.  Cash flow schedules will be stored in parquet files, NPV results in CSV files, and visualizations as image files (e.g., PNG). Trained models will be saved as joblib artifacts.  An audit log in JSON-line format will track execution details.
+*   **Input:**
+    *   Loan data (synthetic generation before loading) containing the following fields:
+        *   `loan_id` (int/str): Unique identifier for the loan.
+        *   `orig_principal` (float): Original principal amount of the loan.
+        *   `orig_rate` (float): Original interest rate of the loan (annual).
+        *   `orig_term_mths` (int): Original loan term in months.
+        *   `pay_freq` (str): Payment frequency (e.g., "monthly").
+        *   `restructure_date` (datetime): Date of the loan restructuring.
+        *   `new_rate` (float): New interest rate after restructuring (annual).
+        *   `new_term_mths` (int): New loan term in months after restructuring.
+        *   `principal_haircut_pct` (float): Percentage of the principal written off during restructuring.
+        *   `rating_before` (int): Credit rating before restructuring.
+        *   `rating_after` (int): Credit rating after restructuring.
+    *   Discount rate (float): Used for calculating the present value of cash flows.
 
-**3.3. Algorithms and Functions:**
+*   **Output:**
+    *   `npv_results.parquet`: A parquet file containing the following columns for each loan:
+        *   `loan_id` (int/str): Unique identifier for the loan.
+        *   `NPV_orig` (float): Net Present Value of the original loan.
+        *   `NPV_new` (float): Net Present Value of the restructured loan.
+        *   `Delta_NPV` (float): Change in Net Present Value due to restructuring.
+        *   `material` (bool): A boolean flag indicating if the absolute value of `Delta_NPV` exceeds a predefined threshold (e.g., USD 50,000).
+    *   `npv_engine.pkl`: A pickled object containing the DCF engine functions.
 
-*   **CashFlowScheduleGenerator:**  This class will generate cash flow schedules for both original and restructured loans.  It will take loan parameters (amount, interest rate, payment frequency, maturity date), and restructuring terms (new maturity date, new interest rate, principal forgiveness, capitalized interest) as input.  The output will be a DataFrame containing the cash flow schedule.  The algorithm will handle both fixed and floating-rate loans.
-*   **DiscountCurveBuilder:** This class will construct discount curves from yield curve data. It will take yield curve data (valuation date, tenor, zero rate) as input and generate a discount factor curve.  The algorithm should be able to interpolate discount factors for any given date.
-*   **NPVCalculator:** This class will calculate the NPV of the original and restructured loans. It will take the cash flow schedules and discount factors as input and calculate the NPV using the formula: $$NPV = \sum_{t=1}^{T} \frac{CF_t}{(1 + r)^t}$$.  The output will include $NPV_{orig}$, $NPV_{new}$, and $\Delta NPV$.
-*   **SensitivityAnalyzer:** This class will perform sensitivity analysis on key assumptions. It will take the NPV results and a range of discount rates (e.g., ±100 bp) as input and recalculate the NPV. The output will show the impact of the discount rate change on the $\Delta NPV$.
+### 3.3 Algorithms and Functions
 
-**3.4. Visualizations:**
+*   **`load_raw()`:**
+    *   Description: Loads the raw loan data from a CSV file or generates a synthetic dataset.
+    *   Input: Optional file path to a CSV file.
+    *   Output: Pandas DataFrame containing the raw loan data.
 
-*   **Cash Flow Timeline Plot:**  A stacked area or line chart showing the principal and interest components of the cash flow schedule for both the original and restructured loans.  Monthly granularity is preferred.
-*   **Discount Factor Curve:** A line plot of the zero/forward rates used in the NPV calculation.
-*   **NPV Bar/Waterfall Chart:** A bar or waterfall chart comparing $NPV_{orig}$ and $NPV_{new}$ for each loan, with the $\Delta NPV$ annotated.
-*   **Sensitivity Tornado Chart:**  A tornado chart showing the impact of changes in key assumptions (e.g., discount rate) on the $\Delta NPV$ for a selected loan.
-*   **Portfolio Heatmap/Scatter Plot:** A heatmap or scatter plot visualizing the $\Delta NPV$ against borrower rating to identify concentrations of economic losses.
+*   **`expand_cashflows()`:**
+    *   Description: Creates cash flow schedules for both the original and restructured loans.
+    *   Input: Pandas DataFrame containing loan data.
+    *   Output: Two Pandas DataFrames, `cf_orig` and `cf_new`, each containing the cash flow schedule with columns: `date`, `interest`, `principal`, `cashflow`.
 
-All plots should be reproducible using Matplotlib and saved as image files.
+*   **`calc_discount_rate()`:**
+    *   Description: Calculates the discount rate to be used for the original and restructured loans. It can consider credit spread adjustments based on rating changes.
+    *   Input: Pandas DataFrame containing loan data.
+    *   Output: Pandas Series of discount rates for each loan.
+
+*   **`deterministic_pv()`:**
+        *   Description: Implementation for deterministic present value calculation
+        *   Input: series of cashflows
+        *   Output: discounted present value
+
+*   **`tidy_merge()`:**
+    *   Description: Merges the original and restructured cash flow schedules into a single "long" format DataFrame.
+    *   Input: `cf_orig` and `cf_new` DataFrames.
+    *   Output: Pandas DataFrame in long format with columns like `loan_id`, `date`, `cashflow`, `type` (original/restructured).
+
+*   **`calculate_npv()`:**
+    *   Description: Calculates the NPV for the original and restructured loans and the change in NPV.
+    *   Input: Pandas DataFrame containing loan data and discount rates.
+    *   Output: Pandas DataFrame with columns `loan_id`, `NPV_orig`, `NPV_new`, `Delta_NPV`.
+
+*    **`assess_materiality()`:**
+    *   Description: Add boolean `material` (‖ΔNPV‖ > USD 50 k).
+    *   Input: Dataframe containing loan NPV results.
+    *   Output: Pandas DataFrame with columns `loan_id`, `NPV_orig`, `NPV_new`, `Delta_NPV`, `material`
+
+*   **`plot_cashflow_timeline()`:**
+    *   Description: Generates a stacked area chart visualizing the cash flow timeline for original and restructured loans.
+    *   Input: Pandas DataFrame in long format (output of `tidy_merge()`).
+    *   Output: Matplotlib plot.
+
+*   **`plot_delta_npv_waterfall()`:**
+    *   Description: Generates a waterfall chart illustrating the economic gain/loss from loan restructuring.
+    *   Input: Pandas DataFrame containing NPV results (output of `calculate_npv()`).
+    *   Output: Matplotlib plot.
+
+### 3.4 Visualizations
+
+1.  **Cash-Flow Timeline (Stacked Area Chart):**
+
+    *   X-axis: Payment date
+    *   Y-axis: Cash flow amount (interest + principal)
+    *   Two colored areas: Original vs. restructured loan cash flows.
+    *   Purpose: To visually highlight timing shifts and payment burden changes due to restructuring.
+
+2.  **ΔNPV Waterfall Chart:**
+
+    *   Bars representing: `NPV_orig` -> adjustments -> `NPV_new` -> `Delta_NPV`.
+    *   Purpose: To make the drivers of economic gain/loss explicit, showing the impact of each adjustment on the NPV.
 
 ## 4. Additional Notes or Instructions
 
-*   **Data Assumptions:** The notebook assumes that the input data is clean and properly formatted.  Data validation using `pydantic` is recommended.
-*   **Reproducibility:**  A fixed `random_state=42` should be used wherever randomness is involved (e.g., in generating synthetic data).
-*   **Materiality Thresholds:**  The notebook should use a configuration file (`npv_config.yml`) to define materiality thresholds for flagging significant $\Delta NPV$ values. Example parameters: `material_delta_npv_abs = 100000`, `material_delta_npv_pct_portfolio = 0.01`.
-*   **Audit Logging:**  The notebook should write an audit log (`audit_log_part1.jsonl`) capturing key information about each run, including the timestamp, user, run ID, threshold flags, and locations of saved artifacts.
-*   **Modular Design:**  The code should be organized into modular classes (`CashFlowScheduleGenerator`, `DiscountCurveBuilder`, `NPVCalculator`, `SensitivityAnalyzer`) with clear docstrings and unit tests.
-*   **Model Persistence:** Save the trained model artifacts to the `models_part1/` directory with the specified filenames (`cashflow_generator_taiwan.joblib`, `discount_curve_builder_taiwan.joblib`, `npv_calculator_taiwan.joblib`, `sensitivity_analyzer_taiwan.joblib`).
-*   **Documentation Hook:**  The notebook should include functionality to auto-populate a Markdown "Case Summary" template with relevant information about each loan restructuring scenario. This should include original and new loan terms, discount rate rationale, NPV figures, and qualitative notes.
-*   **Version Control:** The notebook and artifacts should be committed under the tag `npv_part1_v1.0`.
-
+*   **Assumptions:**
+    *   Deterministic cash flows: No default or prepayment assumptions are included in the model.
+    *   Discount rate selection: The original loan's effective interest rate (EIR) is used as the base discount rate, potentially adjusted for changes in credit risk.
+    *   Restructuring effectiveness: The restructuring is assumed to be effective immediately from the `restructure_date`.
+*   **Constraints:**
+    *   The dataset should contain approximately 10 loans.
+    *   3-5 loans should be restructured to demonstrate the impact of the model.
+    *   Materiality Threshold:  A default of USD 50,000 should be used.
+*   **Customization:**
+    *   The user should be able to modify the discount rate for sensitivity analysis.
+*   **Model Artifact Persistence:**
+    *   The `npv_engine.pkl` file should contain all the functions required to run the NPV calculation.
+*   **Folder Layout:**
+    *   The notebook and all output files (`npv_results.parquet`, `npv_engine.pkl`) should be in a well-organized directory structure.
