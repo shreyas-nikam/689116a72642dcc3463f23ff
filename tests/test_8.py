@@ -1,54 +1,91 @@
 import pytest
 import pandas as pd
 import matplotlib.pyplot as plt
-from definition_ee6f4b8824e64cd9aa3f27bb33b8aff9 import plot_delta_npv_waterfall
+from unittest.mock import patch
 
-@pytest.fixture
-def sample_npv_results():
-    data = {'loan_id': [1, 2, 3, 4, 5],
-            'NPV_orig': [100000, 50000, 75000, 120000, 60000],
-            'NPV_new': [90000, 60000, 80000, 110000, 70000],
-            'Delta_NPV': [-10000, 10000, 5000, -10000, 10000]}
-    return pd.DataFrame(data)
+# This block should remain as is. DO NOT REPLACE or REMOVE.
+from definition_8b69db58514446798a5e48bb4f5e7b95 import plot_delta_npv_waterfall
 
 
-def test_plot_delta_npv_waterfall_valid_input(sample_npv_results, monkeypatch):
-    # Mock plt.show() to prevent the plot from displaying during testing
-    monkeypatch.setattr(plt, 'show', lambda: None)
-    try:
-        plot_delta_npv_waterfall(sample_npv_results)
-    except Exception as e:
-        pytest.fail(f"plot_delta_npv_waterfall raised an exception: {e}")
+def test_plot_delta_npv_waterfall_valid_data():
+    """
+    Test case 1: Valid DataFrame with mixed positive and negative Delta_NPV values.
+    Ensures the function executes without error and calls matplotlib's show function.
+    """
+    results_df = pd.DataFrame({
+        'loan_id': ['L001', 'L002', 'L003', 'L004'],
+        'NPV_orig': [100000, 50000, 75000, 120000],
+        'NPV_new': [110000, 45000, 80000, 100000],
+        'Delta_NPV': [10000, -5000, 5000, -20000]
+    })
+    with patch('matplotlib.pyplot.show') as mock_show:
+        plot_delta_npv_waterfall(results_df)
+        mock_show.assert_called_once()
+
 
 def test_plot_delta_npv_waterfall_empty_dataframe():
-    df = pd.DataFrame({'loan_id': [], 'NPV_orig': [], 'NPV_new': [], 'Delta_NPV': []})
-    try:
-        plot_delta_npv_waterfall(df)
-    except Exception as e:
-        pytest.fail(f"plot_delta_npv_waterfall raised an exception: {e}")
+    """
+    Test case 2: Empty DataFrame.
+    Ensures the function handles an empty input DataFrame gracefully without crashing,
+    and still attempts to generate a plot (which would be empty).
+    """
+    results_df = pd.DataFrame(columns=['loan_id', 'NPV_orig', 'NPV_new', 'Delta_NPV'])
+    with patch('matplotlib.pyplot.show') as mock_show:
+        plot_delta_npv_waterfall(results_df)
+        mock_show.assert_called_once()
 
 
-def test_plot_delta_npv_waterfall_missing_column(monkeypatch):
-    # Mock plt.show() to prevent the plot from displaying during testing
-    monkeypatch.setattr(plt, 'show', lambda: None)
-    data = {'loan_id': [1, 2, 3], 'NPV_orig': [100000, 50000, 75000], 'NPV_new': [90000, 60000, 80000]}
-    df = pd.DataFrame(data)
+@pytest.mark.parametrize("missing_col", ["NPV_orig", "NPV_new", "Delta_NPV"])
+def test_plot_delta_npv_waterfall_missing_required_column(missing_col):
+    """
+    Test case 3: DataFrame with a missing required column (NPV_orig, NPV_new, or Delta_NPV).
+    Expects a KeyError or similar error when the function tries to access the non-existent column.
+    """
+    df_data = {
+        'loan_id': ['L001'],
+        'NPV_orig': [100000],
+        'NPV_new': [110000],
+        'Delta_NPV': [10000]
+    }
+    # Create a copy and drop the specified column
+    results_df = pd.DataFrame(df_data)
+    results_df = results_df.drop(columns=[missing_col])
+
     with pytest.raises(KeyError):
-         plot_delta_npv_waterfall(df)
+        plot_delta_npv_waterfall(results_df)
 
-def test_plot_delta_npv_waterfall_non_numeric_data(monkeypatch):
-    # Mock plt.show() to prevent the plot from displaying during testing
-    monkeypatch.setattr(plt, 'show', lambda: None)
-    data = {'loan_id': [1, 2, 3], 'NPV_orig': ['a', 'b', 'c'], 'NPV_new': [90000, 60000, 80000], 'Delta_NPV': [1,2,3]}
-    df = pd.DataFrame(data)
+
+@pytest.mark.parametrize("invalid_input", [
+    None,
+    123,
+    "not a dataframe",
+    [1, 2, 3],
+    {'a': 1, 'b': 2}
+])
+def test_plot_delta_npv_waterfall_invalid_input_type(invalid_input):
+    """
+    Test case 4: Non-DataFrame input.
+    Ensures the function raises a TypeError if the input is not a pandas DataFrame.
+    """
     with pytest.raises(TypeError):
-        plot_delta_npv_waterfall(df)
+        plot_delta_npv_waterfall(invalid_input)
 
-def test_plot_delta_npv_waterfall_inf_values(sample_npv_results, monkeypatch):
-    # Mock plt.show() to prevent the plot from displaying during testing
-    monkeypatch.setattr(plt, 'show', lambda: None)
-    sample_npv_results.loc[0, 'Delta_NPV'] = float('inf')
-    try:
-        plot_delta_npv_waterfall(sample_npv_results)
-    except Exception as e:
-        pytest.fail(f"plot_delta_npv_waterfall raised an exception with inf values: {e}")
+
+@pytest.mark.parametrize("col_to_corrupt", ["NPV_orig", "NPV_new", "Delta_NPV"])
+def test_plot_delta_npv_waterfall_non_numeric_npv_data(col_to_corrupt):
+    """
+    Test case 5: DataFrame with non-numeric data in NPV columns.
+    Ensures the function raises a ValueError or TypeError if required numerical columns
+    contain non-numeric data, which would typically cause issues during plotting or calculations.
+    """
+    results_df = pd.DataFrame({
+        'loan_id': ['L001'],
+        'NPV_orig': [100000],
+        'NPV_new': [110000],
+        'Delta_NPV': [10000]
+    })
+    # Corrupt one column with a string
+    results_df.loc[0, col_to_corrupt] = 'invalid_data'
+    
+    with pytest.raises((ValueError, TypeError)):
+        plot_delta_npv_waterfall(results_df)
