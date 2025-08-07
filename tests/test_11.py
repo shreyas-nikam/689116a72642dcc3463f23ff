@@ -1,48 +1,25 @@
 import pytest
-import pickle
-from definition_87a4b339efba49eea767321c49542f37 import save_model
+from definition_c4e0d347ccf14eff819aebefdc78168b import _calculate_credit_spread_adjustment
 
-def test_save_model_valid_model(tmp_path):
-    model = {"function1": lambda x: x * 2, "function2": lambda y: y + 1}
-    file_path = tmp_path / "test_model.pkl"
-    save_model(model, file_path)
-    assert file_path.exists()
-
-    with open(file_path, 'rb') as f:
-        loaded_model = pickle.load(f)
-    assert loaded_model.keys() == model.keys()
-
-def test_save_model_empty_model(tmp_path):
-    model = {}
-    file_path = tmp_path / "empty_model.pkl"
-    save_model(model, file_path)
-    assert file_path.exists()
-
-    with open(file_path, 'rb') as f:
-        loaded_model = pickle.load(f)
-    assert loaded_model == {}
-
-def test_save_model_non_dict_model(tmp_path):
-    model = "This is a string"
-    file_path = tmp_path / "string_model.pkl"
-    save_model(model, file_path)
-    assert file_path.exists()
-
-    with open(file_path, 'rb') as f:
-        loaded_model = pickle.load(f)
-    assert loaded_model == model
-
-def test_save_model_invalid_file_path():
-    model = {"func": lambda x: x}
-    file_path = "/invalid/path/model.pkl"
-    with pytest.raises(FileNotFoundError):
-        save_model(model, file_path)
-
-def test_save_model_none_model(tmp_path):
-    model = None
-    file_path = tmp_path / "none_model.pkl"
-    save_model(model, file_path)
-    assert file_path.exists()
-    with open(file_path, 'rb') as f:
-        loaded_model = pickle.load(f)
-    assert loaded_model is None
+@pytest.mark.parametrize("rating_worsened, base_spread_bp, expected", [
+    # Test case 1: Standard scenario - rating worsened, positive base spread
+    (True, 100, 0.01),
+    # Test case 2: Rating not worsened - spread should be zero
+    (False, 250, 0.0),
+    # Test case 3: Edge case - rating worsened, but base spread is zero
+    (True, 0, 0.0),
+    # Test case 4: Edge case - rating worsened, large base spread
+    (True, 5000, 0.5),
+    # Test case 5: Edge case - incorrect type for base_spread_bp (should raise TypeError)
+    (True, "200", TypeError),
+])
+def test_calculate_credit_spread_adjustment(rating_worsened, base_spread_bp, expected):
+    try:
+        result = _calculate_credit_spread_adjustment(rating_worsened, base_spread_bp)
+        # Ensure the result is a float
+        assert isinstance(result, float)
+        # Use pytest.approx for float comparisons to account for potential precision issues
+        assert result == pytest.approx(expected)
+    except Exception as e:
+        # If an exception is expected, check its type
+        assert isinstance(e, expected)
