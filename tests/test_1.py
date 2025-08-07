@@ -1,49 +1,69 @@
 import pytest
 import pandas as pd
-from definition_79a60aa45c5a49de9923fdfb1a75ff30 import expand_cashflows
+from definition_577c709badc64ad49f24aec1985bb57d import expand_cashflows
+
+@pytest.fixture
+def sample_loan_data():
+    data = {'loan_id': [1],
+            'orig_principal': [100000],
+            'orig_rate': [0.05],
+            'orig_term_mths': [36],
+            'pay_freq': ['monthly'],
+            'restructure_date': ['2024-01-01'],
+            'new_rate': [0.04],
+            'new_term_mths': [48],
+            'principal_haircut_pct': [0.0],
+            'rating_before': [700],
+            'rating_after': [720]}
+    return pd.DataFrame(data)
 
 def test_expand_cashflows_empty_dataframe():
     df = pd.DataFrame()
     cf_orig, cf_new = expand_cashflows(df)
-    assert isinstance(cf_orig, pd.DataFrame)
-    assert isinstance(cf_new, pd.DataFrame)
     assert cf_orig.empty
     assert cf_new.empty
 
-
-def test_expand_cashflows_no_restructuring():
-    data = {'loan_id': [1], 'orig_principal': [100000], 'orig_rate': [0.05], 'orig_term_mths': [36], 'pay_freq': ['monthly'], 'restructure_date': [None], 'new_rate': [None], 'new_term_mths': [None], 'principal_haircut_pct': [0], 'rating_before': [700], 'rating_after': [700]}
-    df = pd.DataFrame(data)
-    cf_orig, cf_new = expand_cashflows(df)
-    assert isinstance(cf_orig, pd.DataFrame)
-    assert isinstance(cf_new, pd.DataFrame)
-    assert not cf_orig.empty
-    assert cf_new.empty
-
-def test_expand_cashflows_basic_restructuring():
-    data = {'loan_id': [1], 'orig_principal': [100000], 'orig_rate': [0.05], 'orig_term_mths': [36], 'pay_freq': ['monthly'], 'restructure_date': ['2024-01-01'], 'new_rate': [0.04], 'new_term_mths': [48], 'principal_haircut_pct': [0.1], 'rating_before': [700], 'rating_after': [700]}
-    df = pd.DataFrame(data)
-    df['restructure_date'] = pd.to_datetime(df['restructure_date'])
-    cf_orig, cf_new = expand_cashflows(df)
+def test_expand_cashflows_single_loan(sample_loan_data):
+    cf_orig, cf_new = expand_cashflows(sample_loan_data)
     assert isinstance(cf_orig, pd.DataFrame)
     assert isinstance(cf_new, pd.DataFrame)
     assert not cf_orig.empty
     assert not cf_new.empty
-    assert len(cf_orig) > 0
+    assert 'date' in cf_orig.columns
+    assert 'interest' in cf_orig.columns
+    assert 'principal' in cf_orig.columns
+    assert 'cashflow' in cf_orig.columns
+    assert 'date' in cf_new.columns
+    assert 'interest' in cf_new.columns
+    assert 'principal' in cf_new.columns
+    assert 'cashflow' in cf_new.columns
+    assert len(cf_orig) == 36
+    assert len(cf_new) == 48
 
-def test_expand_cashflows_invalid_pay_freq():
-    data = {'loan_id': [1], 'orig_principal': [100000], 'orig_rate': [0.05], 'orig_term_mths': [36], 'pay_freq': ['invalid'], 'restructure_date': ['2024-01-01'], 'new_rate': [0.04], 'new_term_mths': [48], 'principal_haircut_pct': [0.1], 'rating_before': [700], 'rating_after': [700]}
-    df = pd.DataFrame(data)
-    df['restructure_date'] = pd.to_datetime(df['restructure_date'])
-    with pytest.raises(ValueError):  # Or the specific exception your code raises
-        expand_cashflows(df)
 
-def test_expand_cashflows_zero_principal():
-    data = {'loan_id': [1], 'orig_principal': [0], 'orig_rate': [0.05], 'orig_term_mths': [36], 'pay_freq': ['monthly'], 'restructure_date': ['2024-01-01'], 'new_rate': [0.04], 'new_term_mths': [48], 'principal_haircut_pct': [0.1], 'rating_before': [700], 'rating_after': [700]}
-    df = pd.DataFrame(data)
-    df['restructure_date'] = pd.to_datetime(df['restructure_date'])
-    cf_orig, cf_new = expand_cashflows(df)
+def test_expand_cashflows_no_restructure_date(sample_loan_data):
+    sample_loan_data['restructure_date'] = None
+    cf_orig, cf_new = expand_cashflows(sample_loan_data)
     assert isinstance(cf_orig, pd.DataFrame)
     assert isinstance(cf_new, pd.DataFrame)
-    # Depending on the expected behavior, add assertions about the cashflow content when principal is zero
+    assert not cf_orig.empty
+    assert cf_new.empty  # New cashflow should be empty when restructure date is not populated
+    assert 'date' in cf_orig.columns
+    assert 'interest' in cf_orig.columns
+    assert 'principal' in cf_orig.columns
+    assert 'cashflow' in cf_orig.columns
 
+def test_expand_cashflows_negative_interest_rate(sample_loan_data):
+    sample_loan_data['orig_rate'] = -0.05
+    with pytest.raises(ValueError):
+        expand_cashflows(sample_loan_data)
+
+def test_expand_cashflows_zero_principal(sample_loan_data):
+    sample_loan_data['orig_principal'] = 0
+    cf_orig, cf_new = expand_cashflows(sample_loan_data)
+    assert isinstance(cf_orig, pd.DataFrame)
+    assert isinstance(cf_new, pd.DataFrame)
+    assert not cf_orig.empty
+    assert not cf_new.empty
+    assert cf_orig['principal'].sum() == 0
+    assert cf_new['principal'].sum() == 0
