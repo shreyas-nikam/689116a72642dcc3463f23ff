@@ -1,57 +1,48 @@
 import pytest
-from definition_3caa953805b04d51a775b13ba1519708 import save_model
 import pickle
-import os
+from definition_87a4b339efba49eea767321c49542f37 import save_model
 
-def test_save_model_success(tmp_path):
-    model = {"key": "value"}
-    filepath = tmp_path / "test_model.pkl"
-    save_model(model, str(filepath))
-    assert os.path.exists(filepath)
-    with open(filepath, 'rb') as f:
+def test_save_model_valid_model(tmp_path):
+    model = {"function1": lambda x: x * 2, "function2": lambda y: y + 1}
+    file_path = tmp_path / "test_model.pkl"
+    save_model(model, file_path)
+    assert file_path.exists()
+
+    with open(file_path, 'rb') as f:
         loaded_model = pickle.load(f)
-    assert loaded_model == model
+    assert loaded_model.keys() == model.keys()
 
 def test_save_model_empty_model(tmp_path):
     model = {}
-    filepath = tmp_path / "test_model.pkl"
-    save_model(model, str(filepath))
-    assert os.path.exists(filepath)
-    with open(filepath, 'rb') as f:
+    file_path = tmp_path / "empty_model.pkl"
+    save_model(model, file_path)
+    assert file_path.exists()
+
+    with open(file_path, 'rb') as f:
+        loaded_model = pickle.load(f)
+    assert loaded_model == {}
+
+def test_save_model_non_dict_model(tmp_path):
+    model = "This is a string"
+    file_path = tmp_path / "string_model.pkl"
+    save_model(model, file_path)
+    assert file_path.exists()
+
+    with open(file_path, 'rb') as f:
         loaded_model = pickle.load(f)
     assert loaded_model == model
 
-def test_save_model_complex_object(tmp_path):
-    class MyClass:
-        def __init__(self, x):
-            self.x = x
-    model = MyClass(5)
-    filepath = tmp_path / "test_model.pkl"
-    save_model(model, str(filepath))
-    assert os.path.exists(filepath)
-    with open(filepath, 'rb') as f:
+def test_save_model_invalid_file_path():
+    model = {"func": lambda x: x}
+    file_path = "/invalid/path/model.pkl"
+    with pytest.raises(FileNotFoundError):
+        save_model(model, file_path)
+
+def test_save_model_none_model(tmp_path):
+    model = None
+    file_path = tmp_path / "none_model.pkl"
+    save_model(model, file_path)
+    assert file_path.exists()
+    with open(file_path, 'rb') as f:
         loaded_model = pickle.load(f)
-    assert loaded_model.x == model.x
-
-def test_save_model_filepath_as_path_object(tmp_path):
-    model = {"key": "value"}
-    filepath = tmp_path / "test_model.pkl"
-    save_model(model, filepath) # Pass Path object directly
-    assert os.path.exists(filepath)
-    with open(filepath, 'rb') as f:
-        loaded_model = pickle.load(f)
-    assert loaded_model == model
-
-def test_save_model_no_overwrite(tmp_path):
-    model = {"key": "value"}
-    filepath = tmp_path / "test_model.pkl"
-    # Create a dummy file first
-    with open(filepath, 'w') as f:
-        f.write("Dummy Data")
-
-    save_model(model, str(filepath))
-    assert os.path.exists(filepath)
-
-    with open(filepath, 'rb') as f:
-        loaded_model = pickle.load(f)
-    assert loaded_model == model
+    assert loaded_model is None
