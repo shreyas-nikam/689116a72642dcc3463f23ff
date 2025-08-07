@@ -1,59 +1,30 @@
 import pytest
-import pandas as pd
-from definition_d23e7b1e15574c7e959260caca3a27a0 import tidy_merge
+import math
+from definition_0d070d2e202f40f0bec06f92ce970991 import calculate_npv
 
-@pytest.fixture
-def sample_dataframes():
-    # Create sample dataframes for testing
-    cf_orig = pd.DataFrame({
-        'loan_id': [1, 1, 1],
-        'date': pd.to_datetime(['2024-01-01', '2024-02-01', '2024-03-01']),
-        'cashflow': [100, 100, 100],
-        'type': ['original'] * 3
-    })
-    cf_new = pd.DataFrame({
-        'loan_id': [1, 1],
-        'date': pd.to_datetime(['2024-04-01', '2024-05-01']),
-        'cashflow': [150, 150],
-        'type': ['restructured'] * 2
-    })
-    return cf_orig, cf_new
+@pytest.mark.parametrize("cashflows, discount_rate, expected", [
+    # Test Case 1: Standard positive cash flows and positive discount rate
+    # NPV = 100/(1.1)^1 + 100/(1.1)^2 + 100/(1.1)^3 = 90.90909 + 82.64463 + 75.13148 = 248.6852
+    ([100, 100, 100], 0.10, pytest.approx(248.68519884, rel=1e-9)),
+    
+    # Test Case 2: Empty cash flow list - NPV should be 0
+    ([], 0.05, 0),
+    
+    # Test Case 3: Zero discount rate - NPV should be sum of cash flows
+    # NPV = 50/(1.0)^1 + 75/(1.0)^2 + 25/(1.0)^3 = 50 + 75 + 25 = 150
+    ([50, 75, 25], 0.0, 150),
+    
+    # Test Case 4: Cash flows include negative values
+    # NPV = -50/(1.05)^1 + 100/(1.05)^2 + 100/(1.05)^3 = -47.61905 + 90.70293 + 86.38376 = 129.46764
+    ([-50, 100, 100], 0.05, pytest.approx(129.46763895, rel=1e-9)),
+    
+    # Test Case 5: Discount rate of -1.0 should lead to ZeroDivisionError (1+r = 0)
+    ([100], -1.0, ZeroDivisionError),
+])
+def test_calculate_npv(cashflows, discount_rate, expected):
+    try:
+        result = calculate_npv(cashflows, discount_rate)
+        assert result == expected
+    except Exception as e:
+        assert isinstance(e, expected)
 
-def test_tidy_merge_basic(sample_dataframes):
-    cf_orig, cf_new = sample_dataframes
-    merged_df = tidy_merge(cf_orig, cf_new)
-    assert isinstance(merged_df, pd.DataFrame)
-    assert len(merged_df) == 5  # Total rows from both dataframes
-    assert 'loan_id' in merged_df.columns
-    assert 'date' in merged_df.columns
-    assert 'cashflow' in merged_df.columns
-    assert 'type' in merged_df.columns
-
-def test_tidy_merge_empty_cf_orig(sample_dataframes):
-    _, cf_new = sample_dataframes
-    cf_orig_empty = pd.DataFrame(columns=cf_new.columns)
-    merged_df = tidy_merge(cf_orig_empty, cf_new)
-    assert len(merged_df) == len(cf_new)
-    assert merged_df.equals(cf_new)
-
-def test_tidy_merge_empty_cf_new(sample_dataframes):
-    cf_orig, _ = sample_dataframes
-    cf_new_empty = pd.DataFrame(columns=cf_orig.columns)
-    merged_df = tidy_merge(cf_orig, cf_new_empty)
-    assert len(merged_df) == len(cf_orig)
-    assert merged_df.equals(cf_orig)
-
-def test_tidy_merge_no_shared_columns(sample_dataframes):
-    cf_orig, cf_new = sample_dataframes
-    cf_orig = cf_orig.rename(columns={'cashflow': 'orig_cashflow'})
-    cf_new = cf_new.rename(columns={'cashflow': 'new_cashflow'})
-
-    with pytest.raises(KeyError): # Expect a KeyError if the columns are not the same, since pd.concat will fail
-        tidy_merge(cf_orig, cf_new)
-
-def test_tidy_merge_different_loan_ids(sample_dataframes):
-    cf_orig, cf_new = sample_dataframes
-    cf_new['loan_id'] = 2
-    merged_df = tidy_merge(cf_orig, cf_new)
-    assert len(merged_df) == 5
-    assert len(merged_df['loan_id'].unique()) == 2
