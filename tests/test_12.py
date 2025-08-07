@@ -1,38 +1,19 @@
 import pytest
-import pickle
-from definition_ee917faa9a684deaba83789a79a36887 import load_model
+from definition_8276418d095c4122a841ba7de4153ace import calculate_loan_payment
 
-def test_load_model_valid_file(tmp_path):
-    # Create a dummy pickle file
-    file_path = tmp_path / "test_model.pkl"
-    with open(file_path, "wb") as f:
-        pickle.dump({"key": "value"}, f)
-    
-    # Load the model
-    loaded_model = load_model(str(file_path))
-    
-    # Assert that the model is loaded correctly
-    assert loaded_model == {"key": "value"}
-
-def test_load_model_invalid_file(tmp_path):
-    # Create an empty file
-    file_path = tmp_path / "empty_file.pkl"
-    file_path.write_bytes(b"")
-
-    # Attempt to load from a corrupted pickle file
-    with pytest.raises(Exception):
-        load_model(str(file_path))
-
-def test_load_model_file_not_found():
-    # Attempt to load from a non-existent file
-    with pytest.raises(FileNotFoundError):
-        load_model("non_existent_file.pkl")
-
-def test_load_model_empty_file(tmp_path):
-    # Create a file but do not populate it with pickled data
-    file_path = tmp_path / "empty_file.pkl"
-    file_path.touch()
-
-    # Check that an Exception is raised when attempting to load the file, which will be empty
-    with pytest.raises(Exception):
-        load_model(str(file_path))
+@pytest.mark.parametrize("principal, rate, term_months, expected", [
+    (100000, 0.05, 360, 536.82),  # Typical loan
+    (0, 0.05, 360, 0), # Zero principal
+    (100000, 0, 360, 277.78), # Zero interest rate
+    (100000, 0.05, 0, float('inf')), # Zero term
+    (100000, 0.05, 360.5, TypeError) #Non-integer term
+])
+def test_calculate_loan_payment(principal, rate, term_months, expected):
+    try:
+      if expected == float('inf'):
+        with pytest.raises(ZeroDivisionError):
+            calculate_loan_payment(principal, rate, term_months)
+      else:
+        assert round(calculate_loan_payment(principal, rate, term_months), 2) == expected
+    except Exception as e:
+        assert isinstance(e, expected)
