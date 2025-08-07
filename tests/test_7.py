@@ -1,59 +1,78 @@
 import pytest
 import pandas as pd
 import matplotlib.pyplot as plt
-from definition_7ae3600f065a482da85a21f8b837ba3b import plot_cashflow_timeline
 
-@pytest.fixture
-def mock_dataframe():
-    # Create a simple mock DataFrame for testing
-    data = {'loan_id': [1, 1, 1, 2, 2, 2],
-            'date': pd.to_datetime(['2024-01-01', '2024-02-01', '2024-03-01', '2024-01-01', '2024-02-01', '2024-03-01']),
-            'cashflow': [100, 110, 120, 200, 210, 220],
-            'type': ['original', 'original', 'original', 'restructured', 'restructured', 'restructured']}
-    return pd.DataFrame(data)
+# DO NOT REPLACE or REMOVE THE BLOCK BELOW
+from definition_2263cdea51eb49d8b9b8ed8c6cfc940c import plot_cashflow_timeline
+# DO NOT REPLACE or REMOVE THE BLOCK ABOVE
 
-def test_plot_cashflow_timeline_valid_dataframe(mock_dataframe):
-    # Test that the function runs without errors with a valid DataFrame
-    try:
-        plot_cashflow_timeline(mock_dataframe)
-    except Exception as e:
-        pytest.fail(f"plot_cashflow_timeline raised an exception: {e}")
-    plt.close()  # Close the plot to avoid interference with other tests
+@pytest.fixture(autouse=True)
+def cleanup_matplotlib():
+    """Clears matplotlib figures after each test to prevent side effects."""
+    yield
+    plt.close('all')
+
+def test_plot_cashflow_timeline_valid_data():
+    """Test with a valid DataFrame containing typical cash flow data."""
+    data = {
+        'date': pd.to_datetime(['2023-01-01', '2023-02-01', '2023-03-01']),
+        'cashflow_orig': [100, 120, 110],
+        'cashflow_new': [80, 110, 130]
+    }
+    df_long = pd.DataFrame(data)
+    
+    # Expected: No exception raised, a plot should be generated.
+    plot_cashflow_timeline(df_long)
+    
+    # Assert that a figure and axes were created
+    fig = plt.gcf()
+    assert fig is not None
+    assert len(fig.axes) > 0
 
 def test_plot_cashflow_timeline_empty_dataframe():
-    # Test that the function handles an empty DataFrame gracefully
-    empty_df = pd.DataFrame()
-    try:
-        plot_cashflow_timeline(empty_df)
-    except Exception as e:
-        pytest.fail(f"plot_cashflow_timeline raised an exception with empty dataframe: {e}")
-    plt.close()
+    """Test with an empty DataFrame but with correct columns and types."""
+    df_long = pd.DataFrame(columns=['date', 'cashflow_orig', 'cashflow_new'])
+    # Ensure 'date' column is of datetime type, even if empty, for consistency
+    df_long['date'] = df_long['date'].astype('datetime64[ns]')
+    
+    # Expected: No exception, an empty plot should be generated.
+    plot_cashflow_timeline(df_long)
+    
+    # Assert that a figure and axes were created, even for an empty plot
+    fig = plt.gcf()
+    assert fig is not None
+    assert len(fig.axes) > 0
 
-def test_plot_cashflow_timeline_missing_columns(mock_dataframe):
-    # Test that the function raises an error when required columns are missing
-    invalid_df = mock_dataframe.drop(columns=['cashflow'])
-    with pytest.raises(KeyError):
-        plot_cashflow_timeline(invalid_df)
-    plt.close()
+def test_plot_cashflow_timeline_missing_orig_column():
+    """Test with a DataFrame missing the 'cashflow_orig' column."""
+    data = {
+        'date': pd.to_datetime(['2023-01-01', '2023-02-01']),
+        'cashflow_new': [80, 120]
+    }
+    df_long = pd.DataFrame(data)
+    
+    # Expected: KeyError because 'cashflow_orig' is a required column for plotting.
+    with pytest.raises(KeyError, match="cashflow_orig"):
+        plot_cashflow_timeline(df_long)
 
-def test_plot_cashflow_timeline_non_datetime_date(mock_dataframe):
-    # Test with non-datetime date format
-    mock_dataframe['date'] = ['2024-01-01', '2024-02-01', '2024-03-01', '2024-01-01', '2024-02-01', '2024-03-01']
-    try:
-         plot_cashflow_timeline(mock_dataframe)
-    except Exception as e:
-        pytest.fail(f"plot_cashflow_timeline raised an exception with invalid date format: {e}")
-    plt.close()
+def test_plot_cashflow_timeline_missing_new_column():
+    """Test with a DataFrame missing the 'cashflow_new' column."""
+    data = {
+        'date': pd.to_datetime(['2023-01-01', '2023-02-01']),
+        'cashflow_orig': [100, 100]
+    }
+    df_long = pd.DataFrame(data)
+    
+    # Expected: KeyError because 'cashflow_new' is a required column for plotting.
+    with pytest.raises(KeyError, match="cashflow_new"):
+        plot_cashflow_timeline(df_long)
 
-def test_plot_cashflow_timeline_different_loan_ids(mock_dataframe):
-    # Test with different loan IDs to check plotting logic
-    data = {'loan_id': [1, 1, 1, 2, 2, 2],
-            'date': pd.to_datetime(['2024-01-01', '2024-02-01', '2024-03-01', '2024-01-01', '2024-02-01', '2024-03-01']),
-            'cashflow': [100, 110, 120, 200, 210, 220],
-            'type': ['original', 'original', 'original', 'restructured', 'restructured', 'restructured']}
-    df = pd.DataFrame(data)
-    try:
-        plot_cashflow_timeline(df)
-    except Exception as e:
-        pytest.fail(f"plot_cashflow_timeline raised an exception with different loan id: {e}")
-    plt.close()
+def test_plot_cashflow_timeline_invalid_input_type():
+    """Test with an input that is not a pandas DataFrame (e.g., string, None)."""
+    
+    # Expected: AttributeError as DataFrame methods (like column access) would be called.
+    with pytest.raises(AttributeError):
+        plot_cashflow_timeline("this is not a dataframe")
+
+    with pytest.raises(AttributeError):
+        plot_cashflow_timeline(None)
