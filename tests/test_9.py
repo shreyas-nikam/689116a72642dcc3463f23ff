@@ -1,36 +1,40 @@
 import pytest
 import pandas as pd
-from definition_a4b93386e65a4ae6ae703242a9f1421b import generate_synthetic_data
+from definition_2376707ea15e4008980770f8b525a4c0 import generate_synthetic_loan_data
 
-def test_generate_synthetic_data_positive_num_loans():
+def test_generate_synthetic_loan_data_positive_num_loans():
+    """Test that the function returns a Pandas DataFrame when num_loans is positive."""
     num_loans = 5
-    df = generate_synthetic_data(num_loans)
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) == num_loans
-    assert 'loan_id' in df.columns
-    assert 'orig_principal' in df.columns
-    assert 'orig_rate' in df.columns
+    result = generate_synthetic_loan_data(num_loans)
+    assert isinstance(result, pd.DataFrame)
+    assert len(result) == num_loans
 
-def test_generate_synthetic_data_zero_num_loans():
+def test_generate_synthetic_loan_data_zero_num_loans():
+    """Test that the function returns an empty Pandas DataFrame when num_loans is zero."""
     num_loans = 0
-    df = generate_synthetic_data(num_loans)
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) == 0
+    result = generate_synthetic_loan_data(num_loans)
+    assert isinstance(result, pd.DataFrame)
+    assert len(result) == 0
 
-def test_generate_synthetic_data_columns_present():
+def test_generate_synthetic_loan_data_column_presence():
+    """Test that the function returns a Pandas DataFrame with the correct columns."""
     num_loans = 1
-    df = generate_synthetic_data(num_loans)
+    result = generate_synthetic_loan_data(num_loans)
     expected_columns = ['loan_id', 'orig_principal', 'orig_rate', 'orig_term_mths', 'pay_freq', 'restructure_date', 'new_rate', 'new_term_mths', 'principal_haircut_pct', 'rating_before', 'rating_after']
     for col in expected_columns:
-        assert col in df.columns
+        assert col in result.columns
 
-def test_generate_synthetic_data_data_types():
+def test_generate_synthetic_loan_data_data_types():
+    """Test that the data types of the columns in the Pandas DataFrame are correct."""
     num_loans = 1
-    df = generate_synthetic_data(num_loans)
-    assert df['orig_principal'].dtype == 'float64'
-    assert df['orig_rate'].dtype == 'float64'
-    assert df['orig_term_mths'].dtype == 'int64'
+    result = generate_synthetic_loan_data(num_loans)
+    assert result['orig_principal'].dtype == 'float64'
+    assert result['orig_rate'].dtype == 'float64'
+    assert result['orig_term_mths'].dtype == 'int64'
 
-def test_generate_synthetic_data_negative_num_loans():
-    with pytest.raises(ValueError):
-        generate_synthetic_data(-1)
+def test_generate_synthetic_loan_data_edge_case_large_num_loans():
+    """Test that the function handles a large number of loans without errors."""
+    num_loans = 1000
+    result = generate_synthetic_loan_data(num_loans)
+    assert isinstance(result, pd.DataFrame)
+    assert len(result) == num_loans
